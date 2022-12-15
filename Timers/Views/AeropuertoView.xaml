@@ -36,8 +36,8 @@
                 <RowDefinition></RowDefinition>
             </Grid.RowDefinitions>
 
-            <Label Content="{Binding Error}" FontSize="11" HorizontalAlignment="Center"
-                   Foreground="Red"></Label>
+            <Label  FontSize="11" HorizontalAlignment="Center"
+                   Foreground="Red" Content="{Binding Error}"></Label>
             <WrapPanel HorizontalAlignment="Right">
                 <Button x:Name="btnMinimize" Click="btnMinimize_Click" Style="{DynamicResource btnEstilo1}">
                     <Image Source="/Assets/minimize.png"></Image>
@@ -69,7 +69,8 @@
                            Padding="10,0"
                            TextAlignment="Center"
                            x:Name="txtReloj"
-                           Text="12:56"
+                          
+                           Width="120"
                            FontSize="30"
                            
                            Foreground="White"

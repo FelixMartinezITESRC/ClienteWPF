@@ -17,9 +17,10 @@ namespace Timers.ViewModels
     {
         #region Propiedades_y_campos
         public ObservableCollection<Vuelos> Vuelos { get; set; } = new ObservableCollection<Vuelos>();
+        public List<Vuelos> vuelosNuevos { get; set; } = new List<Vuelos>();
         private readonly VuelosService vuelosService = new VuelosService();
         private DispatcherTimer dispatcherTimer = new();
-        private string error="";
+        private string error = "";
         public string Error
         {
             get { return error; }
@@ -32,7 +33,7 @@ namespace Timers.ViewModels
         public MainViewModel()
         {
             vuelosService.Error += VuelosService_Error;
-            CargarVuelos();
+            Bajar();
             dispatcherTimer.Interval = TimeSpan.FromSeconds(15);
             dispatcherTimer.Tick += DispatcherTimer_Tick;
             dispatcherTimer.Start();
@@ -40,14 +41,33 @@ namespace Timers.ViewModels
         #endregion
 
         #region Métodos
+
+
+        private async void Bajar()
+        {
+            vuelosNuevos.Clear();
+            var vuelos = await vuelosService.GetByDate();
+            vuelos.ForEach(v => vuelosNuevos.Add(v));
+            if (vuelosNuevos.Count != Vuelos.Count)
+            {
+                CargarVuelos();
+            }
+            for (int i = 0; i < Vuelos.Count; i++)
+            {
+                if (Vuelos[i].Estado != vuelosNuevos[i].Estado || Vuelos[i].HorarioSalida != vuelosNuevos[i].HorarioSalida || Vuelos[i].Destino != vuelosNuevos[i].Destino || Vuelos[i].PuertaSalida != vuelosNuevos[i].PuertaSalida)
+                {
+                    CargarVuelos();
+                }
+            }
+        }
         private async void ActualizarVuelo(Vuelos v)
         {
             if (v != null)
             {
                 if (await vuelosService.Update(v))
                 {
-                    
-                }           
+                    Error = "";
+                }
             }
         }
         private async void EliminarVuelo(Vuelos v)
@@ -56,7 +76,7 @@ namespace Timers.ViewModels
             {
                 if (await vuelosService.Delete(v))
                 {
-                    
+                    Error = "";
                 }
             }
         }
@@ -64,11 +84,11 @@ namespace Timers.ViewModels
         {
             return fecha - DateTime.Now;
         }
-        private async void CargarVuelos()
+        private void CargarVuelos()
         {
             Vuelos.Clear();
-            var vuelos = await vuelosService.GetByDate();
-            vuelos.ForEach(v => Vuelos.Add(v));
+            vuelosNuevos.ForEach
+                (v => Vuelos.Add(v));
         }
         public void ActualizarPropiedad(string? name = null)
         {
@@ -83,51 +103,57 @@ namespace Timers.ViewModels
         }
         private void DispatcherTimer_Tick(object? sender, EventArgs e)
         {
-
+            Bajar();
             for (int i = 0; i < Vuelos.Count; i++)
             {
-                if (Vuelos[i].HorarioSalida.Date == DateTime.Now.Date)
+                if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) < 4 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 3)
                 {
-                    if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) < 4 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 3)
+                    if (Vuelos[i].Estado != "En camino")
                     {
-                        if (Vuelos[i].Estado!="En camino")
-                        {
-                            Vuelos[i].Estado = "En camino";
-                            ActualizarVuelo(Vuelos[i]);
-                        }                      
-                    }
-                    else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 3 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 2)
-                    {
-                        if (Vuelos[i].Estado != "Aterrizo")
-                        {
-                            Vuelos[i].Estado = "Aterrizo";
-                            ActualizarVuelo(Vuelos[i]);
-                        }
-                    }
-                    else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 2 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 1)
-                    {
-                        if (Vuelos[i].Estado != "Abordando")
-                        {
-                            Vuelos[i].Estado = "Abordando";
-                            ActualizarVuelo(Vuelos[i]);
-                        }
-                    }
-                    else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 1 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > -2)
-                    {
-                        if (Vuelos[i].Estado != "Despego")
-                        {
-                            Vuelos[i].Estado = "Despego";
-                            ActualizarVuelo(Vuelos[i]);
-                        }
-                    }
-                    else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= -2)
-                    {
-                        EliminarVuelo(Vuelos[i]);
-                        Vuelos.RemoveAt(i);
+                        Vuelos[i].Estado = "En camino";
+                        ActualizarVuelo(Vuelos[i]);
+                        CargarVuelos();
+                        break;
                     }
                 }
+                else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 3 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 2)
+                {
+                    if (Vuelos[i].Estado != "Aterrizo")
+                    {
+                        Vuelos[i].Estado = "Aterrizo";
+                        ActualizarVuelo(Vuelos[i]);
+                        CargarVuelos();
+                        break;
+                    }
+                }
+                else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 2 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 1)
+                {
+                    if (Vuelos[i].Estado != "Abordando")
+                    {
+                        Vuelos[i].Estado = "Abordando";
+                        ActualizarVuelo(Vuelos[i]);
+                        CargarVuelos();
+                        break;
+                    }
+                }
+                else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 1 && (int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) > 0)
+                {
+                    if (Vuelos[i].Estado != "Despego")
+                    {
+                        Vuelos[i].Estado = "Despego";
+                        ActualizarVuelo(Vuelos[i]);
+                        CargarVuelos();
+                        break;
+                    }
+                }
+                else if ((int)(Diferencia(Vuelos[i].HorarioSalida).TotalMinutes) <= 0 || Vuelos[i].Estado=="Cancelado")
+                {
+                    EliminarVuelo(Vuelos[i]);
+                    CargarVuelos();
+                    break;
+                }
+
             }
-            CargarVuelos();
         }
         #endregion
 
